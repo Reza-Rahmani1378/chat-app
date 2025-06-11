@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>چت گروهی با WebSocket</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            direction: rtl;
+            font-family: Tahoma, sans-serif;
+            margin: 30px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        input, button {
+            padding: 8px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<h2>چت گروهی</h2>
+
+<div>
+    <label>نام کاربر: </label><input type="text" id="username" placeholder="مثلاً ali" />
+    <label>آیدی گروه: </label><input type="number" id="groupId" value="1" />
+</div>
+
+<div>
+    <label>پیام:</label>
+    <input type="text" id="messageContent" placeholder="سلام!" />
+    <button onclick="sendMessage()">ارسال پیام</button>
+</div>
+
+<div id="messages"></div>
+
+<script>
+    let stompClient = null;
+
+    function connect() {
+        const socket = new SockJS('/ws-chat');
+        stompClient = Stomp.over(socket);
+        const groupId = document.getElementById('groupId').value;
+
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+
+            stompClient.subscribe('/topic/messages/' + groupId, function (msg) {
+                const body = JSON.parse(msg.body);
+                showMessage(body.senderName + ': ' + body.content);
+            });
+        });
+    }
+
+    function sendMessage() {
+        const senderName = document.getElementById('username').value;
+        const content = document.getElementById('messageContent').value;
+        const groupId = document.getElementById('groupId').value;
+
+        stompClient.send("/app/chat.sendMessage/" + groupId, {}, JSON.stringify({
+            senderName: senderName,
+            content: content
+        }));
+        document.getElementById('messageContent').value = '';
+    }
+
+    function showMessage(message) {
+        const msgBox = document.getElementById('messages');
+        const p = document.createElement('p');
+        p.textContent = message;
+        msgBox.appendChild(p);
+        msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
+    window.onload = connect;
+</script>
+
+</body>
+</html>
